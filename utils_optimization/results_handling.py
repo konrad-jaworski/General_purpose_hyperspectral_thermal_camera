@@ -1,0 +1,131 @@
+import json
+import os
+from datetime import datetime
+import torch
+from utils_optimization.functions_to_construct_objective_function import lmfit_to_torch_values
+import numpy as np
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def save_results(params, residuals, run_id,results_dir,dtype,device):
+    """Robust results saving with proper path handling"""
+    try:
+        base_filename = os.path.join(results_dir, f"run_{run_id}")
+
+        # Save parameters
+        param_file = f"{base_filename}_params.pt"
+        torch.save(lmfit_to_torch_values(params,dtype,device), param_file)
+
+        # Save residuals
+        residual_file = f"{base_filename}_residuals.npy"
+        np.save(residual_file, np.array(residuals))
+
+        # Save metadata
+        metadata = {
+            'run_id': run_id,
+            'timestamp': datetime.now().isoformat(),
+            'num_params': len(params),
+            'final_residual': float(residuals[-1]) if residuals else None
+        }
+
+        with open(f"{base_filename}_metadata.json", 'w') as f:
+            json.dump(metadata, f, indent=2)
+
+        # print(f"Results saved to: {base_filename}_*")
+        return True
+
+    except Exception as e:
+        print(f"Error saving results: {str(e)}")
+        return False
+
+
+def load_best_run(results_dir):
+    """Load the best run from all saved results"""
+    if not os.path.exists(results_dir):
+        return None
+
+    best_residual = float('inf')
+    best_run = None
+
+    for filename in os.listdir(results_dir):
+        if filename.endswith("_metadata.json"):
+            run_id = filename.split('_')[1]  # Extract timestamp
+            try:
+                with open(os.path.join(results_dir, filename)) as f:
+                    meta = json.load(f)
+                if meta['final_residual'] < best_residual:
+                    best_residual = meta['final_residual']
+                    best_run = meta['run_id']
+            except:
+                continue
+
+    if best_run:
+        params = torch.load(os.path.join(results_dir, f"run_{best_run}_params.pt"))
+        residuals = np.load(os.path.join(results_dir, f"run_{best_run}_residuals.npy"))
+        return params, residuals, best_run
+
+    return None
+
+def extract_final_residuals(results_dir):
+    """Load all *.npy files and extract final residuals"""
+    final_residuals = []
+
+    # Walk through all subdirectories
+    for root, _, files in os.walk(results_dir):
+        for file in tqdm(files, desc="Processing runs"):
+            if file.endswith(".npy"):
+                try:
+                    residuals = np.load(os.path.join(root, file))
+                    if len(residuals) > 0:
+                        final_residuals.append(residuals[-1])  # Last element
+                except Exception as e:
+                    print(f"Error loading {file}: {str(e)}")
+
+    return np.array(final_residuals)
+
+def plot_kde_overlays(residual_lists, labels=None, colors=None, bw=0.3, alpha=0.5):
+    """
+    Plot KDE overlays for multiple lists of residuals.
+
+    Parameters:
+    - residual_lists: List of lists or arrays, each containing residuals.
+    - labels: Optional list of labels for the plots.
+    - colors: Optional list of colors for each distribution.
+    - bw: Bandwidth method for KDE.
+    - alpha: Transparency level for fills.
+    """
+    plt.figure(figsize=(10, 6))
+
+    for idx, residuals in enumerate(residual_lists):
+        label = labels[idx] if labels and idx < len(labels) else f"Set {idx+1}"
+        color = colors[idx] if colors and idx < len(colors) else None
+
+        sns.kdeplot(
+            residuals, bw_method=bw, fill=True,
+            label=label, color=color, alpha=alpha, linewidth=2
+        )
+
+    plt.title("Kernel Density Estimate of Residuals", pad=20)
+    plt.xlabel("Residual Value")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.grid(True, alpha=0.8)
+    sns.despine()
+    plt.tight_layout()
+    plt.show()
+
+def plot_kde(residuals,Title=None):
+    plt.figure(figsize=(8, 5))
+    ax = sns.kdeplot(residuals,bw_method=0.3, fill=True,color='#4682B4',alpha=0.7,linewidth=2)
+    stats_text = f"""Total runs: {len(residuals)}
+    Mean: {np.mean(residuals):.2e}
+    Median: {np.median(residuals):.2e}"""
+    plt.text(0.7, 0.7, stats_text,transform=ax.transAxes,bbox=dict(facecolor='white', alpha=0.8))
+
+    plt.title(f"Kernel Density Estimate of Final Residuals of {Title} case", pad=20)
+    plt.xlabel("Residual Value")
+    plt.ylabel("Density")
+    plt.grid(True, alpha=0.8)
+    sns.despine()
+
