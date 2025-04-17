@@ -10,7 +10,7 @@ from utils_optimization.results_handling import save_results
 import matplotlib.pyplot as plt
 
 dtype=torch.float64
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 # Initialization of initial conditions
 n=10 # Number of slots for filters in each of the wheel
