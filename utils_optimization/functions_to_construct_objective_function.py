@@ -1,5 +1,4 @@
 import torch
-from hyperspy._components.lorentzian import Lorentzian
 
 from torch_tmm import Model, BaseLayer, BaseMaterial
 
