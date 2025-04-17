@@ -9,15 +9,27 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 def save_results(params, residuals, run_id,results_dir,dtype,device):
-    """Robust results saving with proper path handling"""
+    """
+    Function to save the results of the optimization using lmfit package
+
+    Args:
+        params (dict): parameters to save
+        residuals (list): history of residuals
+        run_id (str): run id
+        results_dir (str): results directory
+        dtype (torch.dtype): data type
+        device (torch.device): device
+
+    """
     try:
+        # Assigning base filename
         base_filename = os.path.join(results_dir, f"run_{run_id}")
 
-        # Save parameters
+        # Save parameters as torch.Tensor
         param_file = f"{base_filename}_params.pt"
         torch.save(lmfit_to_torch_values(params,dtype,device), param_file)
 
-        # Save residuals
+        # Save residuals history
         residual_file = f"{base_filename}_residuals.npy"
         np.save(residual_file, np.array(residuals))
 
@@ -32,7 +44,6 @@ def save_results(params, residuals, run_id,results_dir,dtype,device):
         with open(f"{base_filename}_metadata.json", 'w') as f:
             json.dump(metadata, f, indent=2)
 
-        # print(f"Results saved to: {base_filename}_*")
         return True
 
     except Exception as e:
@@ -41,13 +52,27 @@ def save_results(params, residuals, run_id,results_dir,dtype,device):
 
 
 def load_best_run(results_dir):
-    """Load the best run from all saved results"""
+    """
+    Load the best run from all saved results from given directory.
+
+    Args:
+        results_dir (str): results directory which contains all runs from specific configuration
+
+    Returns:
+        params (torch.Tensor): optimal parameters
+        residuals (numpy.list): history of residuals
+        best_run (str): best run id in given directory
+
+    """
+    # Check whether directory exist
     if not os.path.exists(results_dir):
         return None
 
+    # Place-holder for the best objective value and id of best run
     best_residual = float('inf')
     best_run = None
 
+    # Going through all files in the directory and checking residual value at the end of the run
     for filename in os.listdir(results_dir):
         if filename.endswith("_metadata.json"):
             run_id = filename.split('_')[1]  # Extract timestamp
@@ -60,6 +85,7 @@ def load_best_run(results_dir):
             except:
                 continue
 
+    # After completing the search we load optimal parameters and history of objective function values
     if best_run:
         params = torch.load(os.path.join(results_dir, f"run_{best_run}_params.pt"))
         residuals = np.load(os.path.join(results_dir, f"run_{best_run}_residuals.npy"))
