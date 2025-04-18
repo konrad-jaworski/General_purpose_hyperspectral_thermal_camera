@@ -1,7 +1,6 @@
 from lmfit import Parameters,Minimizer
 import random
 import torch
-from datetime import datetime
 import os
 from tqdm import tqdm
 from utils_optimization.Set_up_dispersion_and_materials import set_up_dispersion_and_materials
@@ -54,8 +53,8 @@ def Objective_wrapper(params):
     return residual_value
 
 # Main loop for investigating the bandwidth effect
-for k in tqdm(range(11)):
-    for j in range(10):
+for k in tqdm(range(1)):
+    for j in range(1):
 
         results_dir = os.path.join(os.getcwd(), f"optimization_{(n-1)*2}_filters_with_{k}_bandwidth_id")
         os.makedirs(results_dir, exist_ok=True)
