@@ -41,7 +41,7 @@ To utilize the modules and tools within this repository, follow these steps:
 
    ```bash
    git clone https://github.com/konrad-jaworski/General_purpose_hyperspectral_thermal_camera.git
-   cd General_purpose_hyperspectral_thermal_camera/tests/
+   cd General_purpose_hyperspectral_thermal_camera
 
 2. **Install the required dependencies:**
    ```bash
@@ -49,4 +49,5 @@ To utilize the modules and tools within this repository, follow these steps:
 
 3. **Run the test script to verify the setup:**
    ```bash
+   cd General_purpose_hyperspectral_thermal_camera/tests/
    python Example_script.py
