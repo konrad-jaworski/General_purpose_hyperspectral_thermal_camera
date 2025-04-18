@@ -94,32 +94,43 @@ def load_best_run(results_dir):
     return None
 
 def extract_final_residuals(results_dir):
-    """Load all *.npy files and extract final residuals"""
+    """
+    Load all *.npy files and extract final residuals
+
+    Args:
+        results_dir (str): results directory which contains all runs from specific configuration
+
+    Returns:
+        residuals (numpy.list): returns list which contains final objective values after optimization from specific configuration of optimization run
+
+    """
     final_residuals = []
 
     # Walk through all subdirectories
     for root, _, files in os.walk(results_dir):
-        for file in tqdm(files, desc="Processing runs"):
+        for file in files:
             if file.endswith(".npy"):
                 try:
                     residuals = np.load(os.path.join(root, file))
                     if len(residuals) > 0:
-                        final_residuals.append(residuals[-1])  # Last element
+                        final_residuals.append(residuals[-1])  # We save last value of objective function from all runs in specific optimization configuration
                 except Exception as e:
                     print(f"Error loading {file}: {str(e)}")
 
     return np.array(final_residuals)
 
+
+
 def plot_kde_overlays(residual_lists, labels=None, colors=None, bw=0.3, alpha=0.5):
     """
     Plot KDE overlays for multiple lists of residuals.
 
-    Parameters:
-    - residual_lists: List of lists or arrays, each containing residuals.
-    - labels: Optional list of labels for the plots.
-    - colors: Optional list of colors for each distribution.
-    - bw: Bandwidth method for KDE.
-    - alpha: Transparency level for fills.
+    Args:
+        residual_lists: List of lists or arrays, each containing residuals.
+        labels: Optional list of labels for the plots.
+        colors: Optional list of colors for each distribution.
+        bw: Bandwidth method for KDE.
+        alpha: Transparency level for fills.
     """
     plt.figure(figsize=(10, 6))
 
@@ -132,8 +143,8 @@ def plot_kde_overlays(residual_lists, labels=None, colors=None, bw=0.3, alpha=0.
             label=label, color=color, alpha=alpha, linewidth=2
         )
 
-    plt.title("Kernel Density Estimate of Residuals", pad=20)
-    plt.xlabel("Residual Value")
+    plt.title("Kernel Density Estimate of Objective function final value", pad=20)
+    plt.xlabel("Objective function value")
     plt.ylabel("Density")
     plt.legend()
     plt.grid(True, alpha=0.8)
@@ -141,17 +152,4 @@ def plot_kde_overlays(residual_lists, labels=None, colors=None, bw=0.3, alpha=0.
     plt.tight_layout()
     plt.show()
 
-def plot_kde(residuals,Title=None):
-    plt.figure(figsize=(8, 5))
-    ax = sns.kdeplot(residuals,bw_method=0.3, fill=True,color='#4682B4',alpha=0.7,linewidth=2)
-    stats_text = f"""Total runs: {len(residuals)}
-    Mean: {np.mean(residuals):.2e}
-    Median: {np.median(residuals):.2e}"""
-    plt.text(0.7, 0.7, stats_text,transform=ax.transAxes,bbox=dict(facecolor='white', alpha=0.8))
-
-    plt.title(f"Kernel Density Estimate of Final Residuals of {Title} case", pad=20)
-    plt.xlabel("Residual Value")
-    plt.ylabel("Density")
-    plt.grid(True, alpha=0.8)
-    sns.despine()
 

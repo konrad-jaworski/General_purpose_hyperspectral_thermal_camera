@@ -55,7 +55,7 @@ def Objective_wrapper(params):
 
 # Main loop for investigating the bandwidth effect
 for k in tqdm(range(11)):
-    for j in range(1000):
+    for j in range(10):
 
         results_dir = os.path.join(os.getcwd(), f"optimization_{(n-1)*2}_filters_with_{k}_bandwidth_id")
         os.makedirs(results_dir, exist_ok=True)
