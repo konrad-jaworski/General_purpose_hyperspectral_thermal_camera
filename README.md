@@ -30,7 +30,7 @@ A collection of utility functions supporting the optimization process, including
 - Data handling routines for saving and retrieving simulation results
 - Auxiliary functions aiding in the optimization workflow
 
-## Current Development: ### `Lorentzian_function_approach/`
+## Current Development: `Lorentzian_function_approach/`
 
 The project is currently advancing towards an optimization methodology that employs continuous function bases, specifically utilizing Lorentzian functions. This approach aims to enhance the precision and adaptability of filter design within hyperspectral thermal imaging systems.
 
