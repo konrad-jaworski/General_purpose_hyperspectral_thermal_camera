@@ -23,18 +23,13 @@ A collection of utility functions supporting the optimization process, including
 
 # Current Development: Lorentzian Approach
 The project is currently advancing towards an optimization methodology that employs continuous function bases, specifically utilizing Lorentzian functions. 
---------------------------------------------------------------------------------------------------------
 
 # Getting Started
 To utilize the modules and tools within this repository:​
 
 Clone the repository:​
 
-bash
-Copy
-Edit
-git clone https://github.com/konrad-jaworski/General_purpose_hyperspectral_thermal_camera.git
-Navigate to the desired module directory.​
+
 
 
 License
