@@ -8,6 +8,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
 def save_results(params, residuals, run_id,results_dir,dtype,device):
     """
     Function to save the results of the optimization using lmfit package
