@@ -65,7 +65,7 @@ def lorentzian_diff_eta(wavelengths,FWHM,dtype,device):
 
     Args:
         wavelengths (torch.Tensor): tensor containing wavelengths
-        FWHM (float or torch.Tensor): Number of FWHM parameters for Lorentzian distribution
+        FWHM (float or torch.Tensor): FWHM parameters for Lorentzian distribution
         dtype (torch.dtype):  type of the tensors
         device (str or torch.device): target device for the tensors
 
