@@ -33,6 +33,10 @@ This directory contains test scripts to verify the functionality of various modu
 
 The project is currently advancing towards an optimization methodology that employs continuous function bases, specifically utilizing Lorentzian functions. This approach aims to enhance the precision and adaptability of filter design within hyperspectral thermal imaging systems.
 
+### `Qucik_LSQ.py`,`Qucik_nelder.py`,`Qucik_powell.py`
+
+These three scripts implement optimization using the Lorentzian basis and additionally perform optimization of the FWHM parameters.
+
 ## Getting Started
 
 To utilize the modules and tools within this repository, follow these steps:
