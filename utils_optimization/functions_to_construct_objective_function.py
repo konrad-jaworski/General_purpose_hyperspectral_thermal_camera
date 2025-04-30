@@ -65,7 +65,7 @@ def lorentzian_diff_eta(wavelengths,FWHM,dtype,device):
 
     Args:
         wavelengths (torch.Tensor): tensor containing wavelengths
-        FWHM (float or torch.Tensor): FWHM parameters for Lorentzian distribution
+        FWHM (float or torch.Tensor): FWHM parameters for Lorentzian distribution in [nm]
         dtype (torch.dtype):  type of the tensors
         device (str or torch.device): target device for the tensors
 
@@ -74,10 +74,51 @@ def lorentzian_diff_eta(wavelengths,FWHM,dtype,device):
     """
 
     # x spans number of wavelength points
-    x=torch.arange(len(wavelengths))
+    # x=torch.arange(len(wavelengths))
+    # Reassigning for representing lorentzian in terms of [Nm]
+    x=wavelengths
+    # Calculating eta parameters from full width half maximum of Lorentzian
+    #eta=FWHM/2
+    # Now eta parameter would be expressed in [Nm]
+    eta=(FWHM/2)*1e-9
+
+    lorentzian=1/torch.pi*(eta[0]/((x-x[0])**2+eta[0]**2))
+    lorentzian=(lorentzian-lorentzian.min())/(lorentzian.max()-lorentzian.min())
+    L=lorentzian.reshape(-1,1)
+
+    for i in range(1,len(x)):
+        lorentzian=1/torch.pi*(eta[i]/((x-x[i])**2+eta[i]**2))
+        lorentzian=(lorentzian-lorentzian.min())/(lorentzian.max()-lorentzian.min())
+        lorentzian=lorentzian.reshape(-1,1)
+        L=torch.cat((L,lorentzian),dim=1)
+
+    return L
+
+def lorentzian_sweep(wavelengths,alpha,n,dtype,device):
+    """
+    Create a square matrix with Lorentzian functions centered on its diagonal.
+    This version of Lorentzian basis produce FWHM in a sweep fashion where alpha dictates .
+
+    Args:
+        wavelengths (torch.Tensor): tensor containing wavelengths
+        alpha (float or torch.Tensor): parameter determining sweep of FWHM
+        n (int): number of filter sockets in camera
+        dtype (torch.dtype):  type of the tensors
+        device (str or torch.device): target device for the tensors
+
+    Returns:
+        torch.Tensor: Matrix with shape (size, size) with Lorentzian max value on diagonal
+    """
+
+    # x spans number of wavelength points
+    x=wavelengths.to(dtype=dtype,device=device)
+
+    # Sweep of the FWHM parameters
+    FWHM=torch.linspace(50.0,alpha*50.0,n**2-1)#,dtype=dtype,device=device,requires_grad=True)
 
     # Calculating eta parameters from full width half maximum of Lorentzian
-    eta=FWHM/2
+    # Now eta parameter would be expressed in [Nm]
+    eta=(FWHM/2)*1e-9
 
     lorentzian=1/torch.pi*(eta[0]/((x-x[0])**2+eta[0]**2))
     lorentzian=(lorentzian-lorentzian.min())/(lorentzian.max()-lorentzian.min())
@@ -289,6 +330,55 @@ def objective_bandwidth(params,wavelengths,n,Au_mat,Ti_mat,aSi_mat,env,subs,angl
 
     # 2. Construction of Lorentzian
     Lorentzian=lorentzian_diff_eta(wavelengths,FWHM,dtype,device)
+
+    # 3. Coefficient matrix
+    C=P@Lorentzian
+
+    # 4. Approximating the Lorentzian
+    Lorentzian_app=torch.linalg.lstsq(P,C,driver='gelsd')
+
+    # 4.5 Normalization of the Lorentzian approximation
+    Lorentzian_app_normalized=(Lorentzian_app[0]-Lorentzian_app[0].min())/(Lorentzian_app[0].max()-Lorentzian_app[0].min())
+
+    # 5. Calculating Frobenius Norm of difference between approximated Lorentzian and original Lorentzian
+    result=torch.norm(Lorentzian_app_normalized-Lorentzian,p='fro')
+
+    return result
+
+def objective_bandwidth_sweep(params,wavelengths,n,Au_mat,Ti_mat,aSi_mat,env,subs,angles,dtype,device,alpha):
+
+    """
+    Computes objective function in the following way:
+        1. Generate matrix P N x w where N=n**2-1. Matrix contains products of encoder spectra.
+        2. Generate Delta/Lorentzian matrix w x M where M is number of function
+        3. Calculate coefficient matrix C=P@Lorentzian
+        4. Solve linear least square problem with Lorentzian unknown
+        5. Frobenius Norm of difference between Lorentzian_estimated_from_lstq - Lorentzian
+
+    Args:
+        params (torch.Tensor): Pytorch tensor obtained from lmfit_to_torch_values function containing all parameter thicknesses
+        wavelengths (torch.Tensor): tensor containing wavelengths
+        n (int): Number of slots in each filter wheel
+        Au_mat (torch_tmm.BaseMaterial): Object determining material model of gold
+        Ti_mat (torch_tmm.BaseMaterial): Object determining material model of titanium
+        aSi_mat (torch_tmm.BaseMaterial): Object determining amorphous silicon material
+        env (torch_tmm.BaseLayer): Object determining environment for simulation
+        subs (torch_tmm.BaseLayer): Object determining substrate for simulation
+        angles (torch.Tensor): tensor containing angles of incidence used in simulation
+        dtype (torch.dtype):  type of the tensors
+        device (str or torch.device): target device for the tensors
+        FWHM (float): FWHM of Lorentzian
+
+    Returns:
+        torch.Tensor: Frobenius Norm of difference between estimated Lorentzian and Lorentzian
+
+    """
+
+    # 1. Generation of the P matrix of dimensions N x w containing products of encoder spectra
+    P=filter_wheel(params,n,Au_mat,Ti_mat,aSi_mat,env,subs,wavelengths,angles,dtype,device)
+
+    # 2. Construction of Lorentzian
+    Lorentzian=lorentzian_sweep(wavelengths,alpha,n,dtype,device)
 
     # 3. Coefficient matrix
     C=P@Lorentzian

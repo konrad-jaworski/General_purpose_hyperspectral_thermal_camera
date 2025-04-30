@@ -7,6 +7,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
+import re
+from collections import defaultdict
 
 
 def save_results(params, residuals, run_id,results_dir,dtype,device):
@@ -153,4 +155,86 @@ def plot_kde_overlays(residual_lists, labels=None, colors=None, bw=0.3, alpha=0.
     plt.tight_layout()
     plt.show()
 
+def clean_and_rename_runs(directory_path, dry_run=True):
+    """
+    Rename grouped optimization run files in a folder, removing the random 4-digit code
+    and reindexing the run numbers sequentially.
 
+    Parameters:
+    - directory_path (str): Path to the folder containing the files.
+    - dry_run (bool): If True, only prints what would happen without renaming files.
+    """
+
+    # Pattern: run_<id>_<rand>_<type>
+    pattern = re.compile(r"run_(\d+)_(\d{4})_(metadata\.json|params\.pt|residuals\.npy)$")
+
+    file_groups = defaultdict(dict)
+
+    for filename in os.listdir(directory_path):
+        match = pattern.match(filename)
+        if match:
+            run_id, rand_id, file_type = match.groups()
+            group_key = (run_id, rand_id)
+            file_groups[group_key][file_type] = filename
+
+    sorted_keys = sorted(file_groups.keys(), key=lambda x: (int(x[0]), int(x[1])))
+
+    for new_id, key in enumerate(sorted_keys, start=1):
+        files = file_groups[key]
+        for file_type, old_filename in files.items():
+            old_path = os.path.join(directory_path, old_filename)
+
+            # Fix: Use underscore between new_id and type
+            extension = file_type  # e.g., 'params.pt'
+            new_filename = f"run_{new_id}_{extension}"
+            new_path = os.path.join(directory_path, new_filename)
+
+            if dry_run:
+                print(f"[DRY-RUN] Would rename: {old_filename} -> {new_filename}")
+            else:
+                print(f"Renaming: {old_filename} -> {new_filename}")
+                os.rename(old_path, new_path)
+
+
+def revert_run_filenames(results_dir, dry_run=True):
+    """
+    Revert run filenames to their original format using run_id from each metadata file.
+
+    Args:
+        results_dir (str): Path to the directory containing the renamed run files.
+        dry_run (bool): If True, only prints what would be renamed.
+    """
+    for filename in os.listdir(results_dir):
+        if filename.startswith("run_") and filename.endswith("_metadata.json"):
+            base_run = filename.split('_')[1]  # e.g., '1' from 'run_1_metadata.json'
+
+            try:
+                metadata_path = os.path.join(results_dir, filename)
+                with open(metadata_path, 'r') as f:
+                    meta = json.load(f)
+                original_run_id = meta.get('run_id')
+
+                if not original_run_id:
+                    print(f"Skipping {filename}: No 'run_id' found in metadata")
+                    continue
+
+                # Prepare all current and target file names
+                file_types = ["metadata.json", "params.pt", "residuals.npy"]
+                for file_type in file_types:
+                    current_name = f"run_{base_run}_{file_type}"
+                    new_name = f"run_{original_run_id}_{file_type}"
+                    current_path = os.path.join(results_dir, current_name)
+                    new_path = os.path.join(results_dir, new_name)
+
+                    if not os.path.exists(current_path):
+                        print(f"Missing file: {current_name} — skipping")
+                        continue
+
+                    if dry_run:
+                        print(f"[DRY-RUN] Would rename: {current_name} -> {new_name}")
+                    else:
+                        print(f"Renaming: {current_name} -> {new_name}")
+                        os.rename(current_path, new_path)
+
+            except Exception as e:
+                print(f"Error processing {filename}: {e}")
