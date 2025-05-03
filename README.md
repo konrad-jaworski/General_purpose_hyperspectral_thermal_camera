@@ -37,6 +37,18 @@ The project is currently advancing towards an optimization methodology that empl
 
 These three scripts implement optimization using the Lorentzian basis and additionally perform optimization of the FWHM parameters.
 
+### `Sweep_LSQ.py`,`Sweep_nelder.py`,`Sweep_powell.py`
+
+These three scripts implement optimization using the Lorentzian basis which FWHM parameters are derived from sweep function.
+
+### `Optimal_powell.py`
+
+This script perform the same what Sweep_powell.py but paramter initialization are from previous best optimization run.
+
+### `Minimal_number_of_filters_mk2.py`
+
+This script is bases on result of Optimal_powell.py but allows for investigation of different number of filters in the system.
+
 ## Getting Started
 
 To utilize the modules and tools within this repository, follow these steps:
