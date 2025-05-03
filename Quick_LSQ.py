@@ -1,3 +1,13 @@
+"""
+    Following code is a script which allows to run LSQ optimization algorithm with objective function which uses
+    Lorentzian generator based independent FWHM tunable parameters.
+
+    Ti and Au parameters are not fixed
+    Range of FWHM parameters is 0.2-20
+
+     """
+
+
 from lmfit import Parameters,Minimizer
 import random
 import torch

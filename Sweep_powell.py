@@ -1,3 +1,11 @@
+"""
+    Following code is a script which allows to run Powell optimization algorithm with objective function which uses
+    Lorentzian generator based on sweep function.
+
+    Ti and Au parameters are fixed to 2 [nm] and 10 [nm]
+    alpha parameter for sweep function is initialized from 1-4 range and possible range is 1-10
+
+     """
 from lmfit import Parameters,Minimizer
 import random
 import torch

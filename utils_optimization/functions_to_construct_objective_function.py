@@ -24,7 +24,7 @@ def delta(wavelengths,dtype,device):
 
 def lorentzian(wavelengths,FWHM,dtype,device):
     """
-    Create a square matrix with Lorentzian functions centered on its diagonal.
+    Create a square matrix with Lorentzian distributions having their max values placed on its diagonal.
 
     Args:
         wavelengths (torch.Tensor): tensor containing wavelengths
@@ -60,8 +60,8 @@ def lorentzian(wavelengths,FWHM,dtype,device):
 
 def lorentzian_diff_eta(wavelengths,FWHM,dtype,device):
     """
-    Create a square matrix with Lorentzian functions centered on its diagonal.
-    This version of Lorentzian basis allows for tunable FWHM for specific function.
+    Create a square matrix with Lorentzian distributions having their max values placed on its diagonal.
+    This version of Lorentzian basis allows for tunable FWHM for all functions independently.
 
     Args:
         wavelengths (torch.Tensor): tensor containing wavelengths
@@ -73,19 +73,21 @@ def lorentzian_diff_eta(wavelengths,FWHM,dtype,device):
         torch.Tensor: Matrix with shape (size, size) with Lorentzian max value on diagonal
     """
 
-    # x spans number of wavelength points
-    # x=torch.arange(len(wavelengths))
+
     # Reassigning for representing lorentzian in terms of [Nm]
     x=wavelengths
     # Calculating eta parameters from full width half maximum of Lorentzian
-    #eta=FWHM/2
-    # Now eta parameter would be expressed in [Nm]
+    # Now eta parameter would be expressed in [m]
     eta=(FWHM/2)*1e-9
 
+    # Creating of first Lorentzian
     lorentzian=1/torch.pi*(eta[0]/((x-x[0])**2+eta[0]**2))
+    # Normalizing first Lorentzian
     lorentzian=(lorentzian-lorentzian.min())/(lorentzian.max()-lorentzian.min())
+    # Reshaping it for proper shape
     L=lorentzian.reshape(-1,1)
 
+    # Loop which calculate rest of the Lorentzian and concatenate them with each other
     for i in range(1,len(x)):
         lorentzian=1/torch.pi*(eta[i]/((x-x[i])**2+eta[i]**2))
         lorentzian=(lorentzian-lorentzian.min())/(lorentzian.max()-lorentzian.min())
@@ -96,13 +98,14 @@ def lorentzian_diff_eta(wavelengths,FWHM,dtype,device):
 
 def lorentzian_sweep(wavelengths,alpha,n,dtype,device):
     """
-    Create a square matrix with Lorentzian functions centered on its diagonal.
-    This version of Lorentzian basis produce FWHM in a sweep fashion where alpha dictates .
+    Create a square matrix with Lorentzian distributions having their max values placed on its diagonal.
+    This version of Lorentzian basis produce FWHM in a sweep fashion for all functions
+     where alpha dictates how much initial bandwidth must be multiplied to obtain max value of FWHM for sweep function..
 
     Args:
         wavelengths (torch.Tensor): tensor containing wavelengths
         alpha (float or torch.Tensor): parameter determining sweep of FWHM
-        n (int): number of filter sockets in camera
+        n (int): number of filter sockets in camera (Not filters, only sockets)
         dtype (torch.dtype):  type of the tensors
         device (str or torch.device): target device for the tensors
 
@@ -113,17 +116,21 @@ def lorentzian_sweep(wavelengths,alpha,n,dtype,device):
     # x spans number of wavelength points
     x=wavelengths.to(dtype=dtype,device=device)
 
-    # Sweep of the FWHM parameters
-    FWHM=torch.linspace(50.0,alpha*50.0,n**2-1)#,dtype=dtype,device=device,requires_grad=True)
+    # Sweep of the FWHM parameters where initial value start with 50 [nm] bandwidth
+    FWHM=torch.linspace(50.0,alpha*50.0,n**2-1)
 
     # Calculating eta parameters from full width half maximum of Lorentzian
-    # Now eta parameter would be expressed in [Nm]
+    # Now eta parameter would be expressed in [m]
     eta=(FWHM/2)*1e-9
 
+    # Calculating first Lorentzian
     lorentzian=1/torch.pi*(eta[0]/((x-x[0])**2+eta[0]**2))
+    # Normalizing first Lorentzian
     lorentzian=(lorentzian-lorentzian.min())/(lorentzian.max()-lorentzian.min())
+    # Reshaping it for proper shape
     L=lorentzian.reshape(-1,1)
 
+    # Loop to calculate rest of Lorentzian and concatenate them with each other
     for i in range(1,len(x)):
         lorentzian=1/torch.pi*(eta[i]/((x-x[i])**2+eta[i]**2))
         lorentzian=(lorentzian-lorentzian.min())/(lorentzian.max()-lorentzian.min())
@@ -301,7 +308,7 @@ def objective_bandwidth(params,wavelengths,n,Au_mat,Ti_mat,aSi_mat,env,subs,angl
     """
     Computes objective function in the following way:
         1. Generate matrix P N x w where N=n**2-1. Matrix contains products of encoder spectra.
-        2. Generate Delta/Lorentzian matrix w x M where M is number of function
+        2. Generate Lorentzian matrix w x M where M is number of function. This version uses Lorentzian with all FWHM parameters tunnable.
         3. Calculate coefficient matrix C=P@Lorentzian
         4. Solve linear least square problem with Lorentzian unknown
         5. Frobenius Norm of difference between Lorentzian_estimated_from_lstq - Lorentzian
@@ -350,7 +357,7 @@ def objective_bandwidth_sweep(params,wavelengths,n,Au_mat,Ti_mat,aSi_mat,env,sub
     """
     Computes objective function in the following way:
         1. Generate matrix P N x w where N=n**2-1. Matrix contains products of encoder spectra.
-        2. Generate Delta/Lorentzian matrix w x M where M is number of function
+        2. Generate Lorentzian matrix w x M where M is number of function. This version uses Lorentzian with FWHM parameters obtained from sweep function.
         3. Calculate coefficient matrix C=P@Lorentzian
         4. Solve linear least square problem with Lorentzian unknown
         5. Frobenius Norm of difference between Lorentzian_estimated_from_lstq - Lorentzian

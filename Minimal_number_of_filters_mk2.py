@@ -1,11 +1,13 @@
 """
-    Following code is a script which allows to run Nelder-Mead optimization algorithm with objective function which uses
+    Following code is a script which allows to run Powell optimization algorithm with objective function which uses
     Lorentzian generator based on sweep function.
 
     Ti and Au parameters are fixed to 2 [nm] and 10 [nm]
     alpha parameter for sweep function is initialized from 1-4 range and possible range is 1-10
 
      """
+
+
 from lmfit import Parameters,Minimizer
 import random
 import torch
@@ -16,12 +18,11 @@ from utils_optimization.Set_up_dispersion_and_materials import set_up_dispersion
 from utils_optimization.functions_to_construct_objective_function import *
 from utils_optimization.results_handling import save_results
 
-
 dtype=torch.float64
 device = torch.device("cpu")
 
 # Initialization of initial conditions
-n=10 # Number of slots for filters in each of the wheel
+n=4 # Number of slots for filters in each of the wheel
 # Range of wavelengths points
 wavelengths=torch.linspace(8000,14000,n**2-1)*1e-9 # Expressed in [m] as tmm_torch requires
 # Angles of incidence
@@ -62,8 +63,8 @@ def Objective_wrapper(params):
     return residual_value
 
 # Main loop for investigating the bandwidth effect
-for k in tqdm(range(5)):
-    results_dir = os.path.join(os.getcwd(), f"optimization_sweep_nelder")
+for k in tqdm(range(50)):
+    results_dir = os.path.join(os.getcwd(), f"optimization_sweep_powell_filter_number_{(n-1)*2}")
     os.makedirs(results_dir, exist_ok=True)
     run_id = f"{k+1}_{random.randint(1000, 9999)}"
 
@@ -82,13 +83,13 @@ for k in tqdm(range(5)):
         params.add(f'aSi_filter_{i + 1}', value=random.uniform(1000e-9, 10000e-9), min=1000e-9, max=10000e-9)
 
     # Bandwidth of Lorentzian
-    params.add(f'Sweep_range', value=random.uniform(1,4), min=1, max=4)
+    params.add(f'Sweep_range', value=random.uniform(1,4), min=1, max=10)
 
     # List which stores objective function value over the iterations
     Residuals_over = []
 
     minimizer = Minimizer(Objective_wrapper, params)
-    result = minimizer.minimize(method='nelder-mead')
+    result = minimizer.minimize(method='powell')
 
     save_success = save_results(result.params, Residuals_over, run_id,results_dir,dtype,device)
 
